@@ -29,7 +29,7 @@ namespace BrickNBalls.SceneManagement
         [SerializeField]
         private bool _enableDebugLogging;
 
-        private bool _isSubscribed;
+        private GameManager _subscribedGameManager;
 
         private void Awake()
         {
@@ -57,7 +57,7 @@ namespace BrickNBalls.SceneManagement
             }
 
             SetVisible(false);
-            TrySubscribe();
+            MaintainSubscription();
         }
 
         private void OnDisable()
@@ -109,41 +109,43 @@ namespace BrickNBalls.SceneManagement
             }
         }
 
-        private void TrySubscribe()
+        private void MaintainSubscription()
         {
-            if (_isSubscribed)
+            GameManager current = GameManager.Instance;
+
+            if (current == _subscribedGameManager)
             {
                 return;
             }
 
-            if (GameManager.Instance == null)
+            if (_subscribedGameManager != null)
+            {
+                _subscribedGameManager.GameOver -= OnGameOver;
+                _subscribedGameManager = null;
+            }
+
+            if (current == null)
             {
                 return;
             }
 
-            GameManager.Instance.GameOver -= OnGameOver;
-            GameManager.Instance.GameOver += OnGameOver;
-
-            _isSubscribed = true;
+            _subscribedGameManager = current;
+            _subscribedGameManager.GameOver += OnGameOver;
             LogDebug("Subscribed to GameManager.GameOver.");
         }
 
         private void Unsubscribe()
         {
-            if (GameManager.Instance != null)
+            if (_subscribedGameManager != null)
             {
-                GameManager.Instance.GameOver -= OnGameOver;
+                _subscribedGameManager.GameOver -= OnGameOver;
+                _subscribedGameManager = null;
             }
-
-            _isSubscribed = false;
         }
 
         private void Update()
         {
-            if (!_isSubscribed)
-            {
-                TrySubscribe();
-            }
+            MaintainSubscription();
         }
 
         private void LogDebug(string message)

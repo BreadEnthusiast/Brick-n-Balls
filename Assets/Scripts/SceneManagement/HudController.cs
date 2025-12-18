@@ -27,7 +27,8 @@ namespace BrickNBalls.SceneManagement
         [SerializeField]
         private string _shotsPrefix = "Shots: ";
 
-        private bool _isSubscribed;
+        private ScoreManager _subscribedScoreManager;
+        private ShotLimitManager _subscribedShotLimitManager;
 
         private void Awake()
         {
@@ -49,7 +50,7 @@ namespace BrickNBalls.SceneManagement
 
         private void OnEnable()
         {
-            TrySubscribe();
+            MaintainSubscription();
         }
 
         private void OnDisable()
@@ -67,42 +68,61 @@ namespace BrickNBalls.SceneManagement
 
         private void Update()
         {
-            if (!_isSubscribed)
-            {
-                TrySubscribe();
-            }
+            MaintainSubscription();
         }
 
-        private void TrySubscribe()
+        private void MaintainSubscription()
         {
-            if (ScoreManager.Instance == null || ShotLimitManager.Instance == null)
+            ScoreManager currentScoreManager = ScoreManager.Instance;
+            ShotLimitManager currentShotLimitManager = ShotLimitManager.Instance;
+
+            if (_subscribedScoreManager != currentScoreManager)
             {
-                return;
+                if (_subscribedScoreManager != null)
+                {
+                    _subscribedScoreManager.ScoreChanged -= OnScoreChanged;
+                }
+
+                _subscribedScoreManager = currentScoreManager;
+                if (_subscribedScoreManager != null)
+                {
+                    _subscribedScoreManager.ScoreChanged += OnScoreChanged;
+                }
             }
 
-            ScoreManager.Instance.ScoreChanged -= OnScoreChanged;
-            ScoreManager.Instance.ScoreChanged += OnScoreChanged;
+            if (_subscribedShotLimitManager != currentShotLimitManager)
+            {
+                if (_subscribedShotLimitManager != null)
+                {
+                    _subscribedShotLimitManager.ShotsChanged -= OnShotsChanged;
+                }
 
-            ShotLimitManager.Instance.ShotsChanged -= OnShotsChanged;
-            ShotLimitManager.Instance.ShotsChanged += OnShotsChanged;
+                _subscribedShotLimitManager = currentShotLimitManager;
+                if (_subscribedShotLimitManager != null)
+                {
+                    _subscribedShotLimitManager.ShotsChanged += OnShotsChanged;
+                }
+            }
 
-            _isSubscribed = true;
-            RefreshAll();
+            if (_subscribedScoreManager != null && _subscribedShotLimitManager != null)
+            {
+                RefreshAll();
+            }
         }
 
         private void Unsubscribe()
         {
-            if (ScoreManager.Instance != null)
+            if (_subscribedScoreManager != null)
             {
-                ScoreManager.Instance.ScoreChanged -= OnScoreChanged;
+                _subscribedScoreManager.ScoreChanged -= OnScoreChanged;
+                _subscribedScoreManager = null;
             }
 
-            if (ShotLimitManager.Instance != null)
+            if (_subscribedShotLimitManager != null)
             {
-                ShotLimitManager.Instance.ShotsChanged -= OnShotsChanged;
+                _subscribedShotLimitManager.ShotsChanged -= OnShotsChanged;
+                _subscribedShotLimitManager = null;
             }
-
-            _isSubscribed = false;
         }
 
         private void RefreshAll()
